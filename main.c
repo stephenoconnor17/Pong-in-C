@@ -11,7 +11,7 @@ int main(void)
 
     SDL_Window* win = SDL_CreateWindow("SDL Test",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        w, h, SDL_WINDOW_SHOWN);
+        1080, 720, SDL_WINDOW_SHOWN);
 
     if (!win) {
         fprintf(stderr, "CreateWindow failed: %s\n", SDL_GetError());

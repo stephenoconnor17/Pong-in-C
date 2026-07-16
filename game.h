@@ -6,18 +6,18 @@ typedef struct game{
     int width;
     int height;
 
-    int playerX;
-    int playerY;
+    float playerX;
+    float playerY;
 
-    int enemyX;
-    int enemyY;
+    float enemyX;
+    float enemyY;
 
     int paddleWidth;
     int paddleLength;
 
     int ballWidth;
-    int ballX;
-    int ballY;
+    float ballX;
+    float ballY;
 
     int playerScore;
     int enemyScore;
@@ -28,5 +28,6 @@ void update(game_t* game, double delta);
 int getUpOrDown();
 int calculateTrajectory();
 void render(game_t* game, SDL_Window* window, SDL_Surface* surface);
+int playerBoundsCheck(game_t* game);
 
 #endif
