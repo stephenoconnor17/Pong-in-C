@@ -25,7 +25,7 @@ void gameInit(game_t* game){
     serveBall(game);
 }
 
-void serveBall(game_t* game){
+static void serveBall(game_t* game){
     (*game).ballX = ((*game).width / 2) - ((*game).ballWidth / 2);
     (*game).ballY = ((*game).height / 2) - ((*game).ballWidth / 2);
 
@@ -37,7 +37,7 @@ void serveBall(game_t* game){
     game->ballVelY = 200 * sin(theta);
 }
 
-bounds_t playerBoundsCheck(game_t* game){
+static bounds_t playerBoundsCheck(game_t* game){
     if(game->playerY + game->paddleLength >= game->height){
         return BOUNDS_DOWN;
     }else if(game->playerY <= 0){
@@ -47,7 +47,7 @@ bounds_t playerBoundsCheck(game_t* game){
     }
 }
 
-bounds_t enemyBoundsCheck(game_t* game){
+static bounds_t enemyBoundsCheck(const game_t* game){
     if(game->enemyY + game->paddleLength >= game->height){
         return BOUNDS_DOWN;
     }else if(game->enemyY <= 0){
@@ -57,7 +57,14 @@ bounds_t enemyBoundsCheck(game_t* game){
     }
 }
 
-bounds_t ballBoundsCheck(game_t* game){
+static int ballPaddleCollision(const game_t* game, float px, float py){
+    return (game->ballX <= px + game->paddleWidth) 
+    && (game->ballX + game->ballWidth >= px)
+    && (game->ballY + game->ballWidth >= py)
+    && (game->ballY <= py + game->paddleLength);
+}
+
+static bounds_t ballBoundsCheck(game_t* game){
     if(game->ballY + game->ballWidth >= game->height){
         return BOUNDS_DOWN;
     }else if(game->ballY <= 0){
@@ -66,12 +73,16 @@ bounds_t ballBoundsCheck(game_t* game){
         return BOUNDS_RIGHT;
     }else if(game->ballX < 0){
         return BOUNDS_LEFT;
+    }else if(ballPaddleCollision(game, game->playerX, game->playerY)){
+        return PADDLE_LEFT;
+    }else if(ballPaddleCollision(game, game->enemyY, game->enemyY)){
+        return PADDLE_RIGHT;
     }else{
         return BOUNDS_NONE;
     }
 }
 
-move_t getUpOrDown(){
+static move_t getUpOrDown(){
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
     if(keys[SDL_SCANCODE_W]) return MOVE_UP;
     if(keys[SDL_SCANCODE_S]) return MOVE_DOWN;
@@ -103,6 +114,9 @@ void update(game_t* game, double delta){
             game->playerScore++;
             serveBall(game);
             break;
+        case PADDLE_LEFT: case PADDLE_RIGHT:
+            //game->ballVelY = -game->ballVelY;
+            game->ballVelX = -game->ballVelX;
         case BOUNDS_NONE:
             break;
     }

@@ -7,7 +7,9 @@ typedef enum{
     BOUNDS_DOWN,
     BOUNDS_LEFT,
     BOUNDS_RIGHT,
-    BOUNDS_NONE
+    BOUNDS_NONE,
+    PADDLE_LEFT,
+    PADDLE_RIGHT
 }bounds_t;
 
 typedef enum{
@@ -43,11 +45,6 @@ typedef struct game{
 
 void gameInit(game_t* game);
 void update(game_t* game, double delta);
-move_t getUpOrDown();
-void serveBall();
 void render(game_t* game, SDL_Window* window, SDL_Surface* surface);
-bounds_t playerBoundsCheck(game_t* game);
-bounds_t ballBoundsCheck(game_t* game);
-bounds_t enemyBoundsCheck(game_t* game);
 
 #endif
