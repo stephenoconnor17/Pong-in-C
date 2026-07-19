@@ -30,8 +30,10 @@ typedef struct game{
 
     int paddleWidth;
     int paddleLength;
+    int paddleSpeed;
 
     int ballWidth;
+    int ballSpeed;
     float ballX;
     float ballY;
     float ballVelX;

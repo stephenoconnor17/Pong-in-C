@@ -2,6 +2,19 @@
 #include<time.h>
 #include<math.h>
 
+static void serveBall(game_t* game){
+
+    (*game).ballX = ((*game).width / 2) - ((*game).ballWidth / 2);
+    (*game).ballY = ((*game).height / 2) - ((*game).ballWidth / 2);
+
+    int direction = (rand() % 2) ? 1 : -1;
+    float angle = ((rand() % 100) / 100.0 - 0.5);
+
+    double theta = angle * (M_PI / 2);
+    game->ballVelX = direction * game->ballSpeed * cos(theta);
+    game->ballVelY = game->ballSpeed * sin(theta);
+}
+
 void gameInit(game_t* game){
     srand(time(NULL));
 
@@ -10,6 +23,7 @@ void gameInit(game_t* game){
 
     (*game).paddleLength = 100;
     (*game).paddleWidth = 20;
+    (*game).paddleSpeed = 225;
 
     (*game).enemyX = 1000.0 - game->paddleWidth;
     (*game).enemyY = (game->height / 2) - (game->paddleLength / 2);
@@ -17,24 +31,13 @@ void gameInit(game_t* game){
     (*game).playerX = 80;
     (*game).playerY = (game->height / 2) - (game->paddleLength / 2);
 
-    (*game).ballWidth = 10;
+    (*game).ballWidth = 20;
+    (*game).ballSpeed = 325;
 
     (*game).playerScore = 0;
     (*game).enemyScore = 0;
 
     serveBall(game);
-}
-
-static void serveBall(game_t* game){
-    (*game).ballX = ((*game).width / 2) - ((*game).ballWidth / 2);
-    (*game).ballY = ((*game).height / 2) - ((*game).ballWidth / 2);
-
-    int direction = (rand() % 2) ? 1 : -1;
-    float angle = ((rand() % 100) / 100.0 - 0.5);
-
-    double theta = angle * (M_PI / 2);
-    game->ballVelX = direction * 200 * cos(theta);
-    game->ballVelY = 200 * sin(theta);
 }
 
 static bounds_t playerBoundsCheck(game_t* game){
@@ -75,7 +78,7 @@ static bounds_t ballBoundsCheck(game_t* game){
         return BOUNDS_LEFT;
     }else if(ballPaddleCollision(game, game->playerX, game->playerY)){
         return PADDLE_LEFT;
-    }else if(ballPaddleCollision(game, game->enemyY, game->enemyY)){
+    }else if(ballPaddleCollision(game, game->enemyX - game->paddleWidth, game->enemyY)){
         return PADDLE_RIGHT;
     }else{
         return BOUNDS_NONE;
@@ -89,14 +92,27 @@ static move_t getUpOrDown(){
     return MOVE_NONE;
 }
 
+static void moveEnemyTowardsBall(game_t* game, double delta){
+    bounds_t enemyBounds = enemyBoundsCheck(game);
+    if(enemyBounds != BOUNDS_DOWN){
+        if(game->ballY > (game->enemyY + (game->paddleLength / 2) + 10)) game->enemyY += game->paddleSpeed * delta;
+    }
+    if(enemyBounds != BOUNDS_UP){
+        if(game->ballY < (game->enemyY + (game->paddleLength / 2) - 10)) game->enemyY -= game->paddleSpeed * delta;
+    }
+     
+}
+
 void update(game_t* game, double delta){
     //player movement
     move_t action = getUpOrDown();
     if(action == MOVE_UP){
-        if((playerBoundsCheck(game)) != BOUNDS_UP) game->playerY -= 250 * delta;
+        if((playerBoundsCheck(game)) != BOUNDS_UP) game->playerY -= game->paddleSpeed * delta;
     }else if(action == MOVE_DOWN){
-        if((playerBoundsCheck(game)) != BOUNDS_DOWN) game->playerY += 250 * delta;
+        if((playerBoundsCheck(game)) != BOUNDS_DOWN) game->playerY += game->paddleSpeed * delta;
     }
+
+    moveEnemyTowardsBall(game, delta);
 
     //ball movement
     game->ballX += game->ballVelX * delta;
