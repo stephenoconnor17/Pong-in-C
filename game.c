@@ -138,8 +138,79 @@ void update(game_t* game, double delta){
     }
 }
 
+static void drawCentreLine(const game_t* game, SDL_Surface* surface){
+    int segmentHeight = 20;
+    int gap = 15;
+    int lineWidth = 4;
+    int x = (game->width / 2) - (lineWidth / 2);
+
+    for(int y = 0; y < game->height; y += segmentHeight + gap){
+        SDL_Rect segment = {x, y, lineWidth, segmentHeight};
+        SDL_FillRect(surface, &segment, 0xFFFFFFFF);
+    }
+}
+
+static void drawScores(const game_t* game){
+    //to draw the numbers, there are no draw text sdl functions.
+    //so we will use a 7 segment display for them.
+    //we will turn them on using bitwise operations (a first for me!)
+
+    // 0111 1111
+    // /gfe dcba
+    /*
+        a
+       b c
+        d
+       e f
+        g
+    */
+
+    //0 gfecba
+    //1 fc
+    //2 gedca
+    //3 gfdca
+    //4 gfdcb
+    //5 gfdba
+    //6 gfedba
+    //7 fca
+    //8 gfedbca
+    //9 gfdcba
+
+    Uint8 numbers[10] = {
+        0x77,   // 0
+        0x24,   // 1
+        0x5D,   // 2
+        0x6D,   // 3
+        0x2E,   // 4
+        0x6B,   // 5
+        0x7B,   // 6 
+        0x25,   // 7
+        0x7F,   // 8
+        0x6F    // 9
+    };
+
+    int segmentT = 6;
+    int segmentLength = segmentT * 5;
+    int totalLength = (segmentLength * 2) + (segmentT * 3);
+    int totalWidth = (segmentT * 2) + segmentLength;
+
+    //top left of total digit.
+    //left side is this x
+    //middle is this + segmentT + 1/8 t
+    //right is this + segmentT + 2/8 t + segmentLength;
+    
+    //y is 20,
+    // 20 + 1/8t +  segmentT
+    //20 + 1/8t + segmentT + 1/8 T + segmentLength
+    //20 + 1/8t + 2(segmentT) + 2/8 T + segmentLength
+    //20 + 1/8t + 2(segmentT) + 3/8 T + 2(segmentLength)
+
+}
+
 void render(game_t* game, SDL_Window* window, SDL_Surface* surface){
     SDL_FillRect(surface, NULL, 0x00000000);//clear screen.
+
+    drawCentreLine(game, surface);
 
     SDL_Rect player = {(int)game->playerX,(int)game->playerY,game->paddleWidth,game->paddleLength};
     SDL_Rect enemy = {(int)game->enemyX - (int)game->paddleWidth,(int)game->enemyY,game->paddleWidth,game->paddleLength};
