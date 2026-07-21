@@ -150,7 +150,7 @@ static void drawCentreLine(const game_t* game, SDL_Surface* surface){
     }
 }
 
-static void drawScores(const game_t* game){
+static void drawScores(const game_t* game, SDL_Surface* surface){
     //to draw the numbers, there are no draw text sdl functions.
     //so we will use a 7 segment display for them.
     //we will turn them on using bitwise operations (a first for me!)
@@ -190,9 +190,40 @@ static void drawScores(const game_t* game){
     };
 
     int segmentT = 6;
-    int segmentLength = segmentT * 5;
-    int totalLength = (segmentLength * 2) + (segmentT * 3);
-    int totalWidth = (segmentT * 2) + segmentLength;
+    int gap = 1;
+    int segmentHeight = segmentT * 5;
+    int totalHeight = (segmentHeight * 2) + (segmentT * 3);
+    int totalWidth = (segmentT * 2) + segmentHeight;
+
+    
+
+    //player drawing
+    int playerScoreX = game->width / 4 - totalWidth / 2;
+    int playerScoreY = 20;
+    const int xLeft   = playerScoreX;
+    const int xMid    = playerScoreX + segmentT + gap;
+    const int xRight  = playerScoreX + segmentT + (gap * 2) + segmentHeight;
+
+    const int yTop    = playerScoreY;
+    const int yUpper  = playerScoreY + segmentT + gap;
+    const int yMid    = playerScoreY + segmentT + (gap * 2) + segmentHeight;
+    const int yLower  = playerScoreY + (segmentT * 2) + (gap * 3) + segmentHeight;
+    const int yBottom = playerScoreY + (segmentT * 2) + (gap * 4) + (segmentHeight * 2);
+
+    const Uint8 mask = numbers[game->playerScore];
+
+    // horizontal segments
+    if (mask & (1u << 0)) SDL_FillRect(surface, &(SDL_Rect){xMid, yTop,    segmentHeight, segmentT}, 0xFFFFFFFF);
+    if (mask & (1u << 3)) SDL_FillRect(surface, &(SDL_Rect){xMid, yMid,    segmentHeight, segmentT}, 0xFFFFFFFF);
+    if (mask & (1u << 6)) SDL_FillRect(surface, &(SDL_Rect){xMid, yBottom, segmentHeight, segmentT}, 0xFFFFFFFF);
+
+    // left segments
+    if (mask & (1u << 1)) SDL_FillRect(surface, &(SDL_Rect){xLeft, yUpper, segmentT, segmentHeight}, 0xFFFFFFFF);
+    if (mask & (1u << 4)) SDL_FillRect(surface, &(SDL_Rect){xLeft, yLower, segmentT, segmentHeight}, 0xFFFFFFFF);
+
+    // right segments
+    if (mask & (1u << 2)) SDL_FillRect(surface, &(SDL_Rect){xRight, yUpper, segmentT, segmentHeight}, 0xFFFFFFFF);
+    if (mask & (1u << 5)) SDL_FillRect(surface, &(SDL_Rect){xRight, yLower, segmentT, segmentHeight}, 0xFFFFFFFF);
 
     //top left of total digit.
     //left side is this x
@@ -211,6 +242,7 @@ void render(game_t* game, SDL_Window* window, SDL_Surface* surface){
     SDL_FillRect(surface, NULL, 0x00000000);//clear screen.
 
     drawCentreLine(game, surface);
+    drawScores(game, surface);
 
     SDL_Rect player = {(int)game->playerX,(int)game->playerY,game->paddleWidth,game->paddleLength};
     SDL_Rect enemy = {(int)game->enemyX - (int)game->paddleWidth,(int)game->enemyY,game->paddleWidth,game->paddleLength};
