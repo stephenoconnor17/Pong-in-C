@@ -23,7 +23,7 @@ void gameInit(game_t* game){
 
     (*game).paddleLength = 100;
     (*game).paddleWidth = 20;
-    (*game).paddleSpeed = 225;
+    (*game).paddleSpeed = 175;
 
     (*game).enemyX = 1000.0 - game->paddleWidth;
     (*game).enemyY = (game->height / 2) - (game->paddleLength / 2);
@@ -32,10 +32,20 @@ void gameInit(game_t* game){
     (*game).playerY = (game->height / 2) - (game->paddleLength / 2);
 
     (*game).ballWidth = 20;
-    (*game).ballSpeed = 325;
+    (*game).ballSpeed = 425;
 
     (*game).playerScore = 0;
     (*game).enemyScore = 0;
+
+    serveBall(game);
+}
+
+static void resetGame(game_t* game){
+    game->playerScore = 0;
+    game->enemyScore = 0;
+
+    game->playerY = (game->height / 2) - (game->paddleLength / 2);
+    game->enemyY = (game->height / 2) - (game->paddleLength / 2);
 
     serveBall(game);
 }
@@ -65,6 +75,24 @@ static int ballPaddleCollision(const game_t* game, float px, float py){
     && (game->ballX + game->ballWidth >= px)
     && (game->ballY + game->ballWidth >= py)
     && (game->ballY <= py + game->paddleLength);
+}
+
+static void bounceOffPaddle(game_t* game, float paddleY, int direction){
+    //angle of the bounce depends on where the ball hits the paddle:
+    //centre -> flat, top/bottom edge -> steep. relative is in [-1, 1].
+    float paddleCentre = paddleY + (game->paddleLength / 2.0f);
+    float ballCentre = game->ballY + (game->ballWidth / 2.0f);
+    float relative = (ballCentre - paddleCentre) / (game->paddleLength / 2.0f);
+
+    if(relative > 1.0f) relative = 1.0f;
+    if(relative < -1.0f) relative = -1.0f;
+
+    double maxBounceAngle = M_PI / 3; //60 degrees
+    double bounceAngle = relative * maxBounceAngle;
+
+    //direction: 1 sends the ball right (off player), -1 sends it left (off enemy).
+    game->ballVelX = direction * game->ballSpeed * cos(bounceAngle);
+    game->ballVelY = game->ballSpeed * sin(bounceAngle);
 }
 
 static bounds_t ballBoundsCheck(game_t* game){
@@ -119,20 +147,30 @@ void update(game_t* game, double delta){
     game->ballY += game->ballVelY * delta;
 
     switch(ballBoundsCheck(game)){
-        case BOUNDS_UP: case BOUNDS_DOWN:
-            game->ballVelY = -game->ballVelY;
+        case BOUNDS_UP:
+            game->ballY = 0;
+            if(game->ballVelY < 0) game->ballVelY = -game->ballVelY;
+            break;
+        case BOUNDS_DOWN:
+            game->ballY = game->height - game->ballWidth;
+            if(game->ballVelY > 0) game->ballVelY = -game->ballVelY;
             break;
         case BOUNDS_LEFT:
             game->enemyScore++;
-            serveBall(game);
+            if(game->enemyScore >= 9) resetGame(game);
+            else serveBall(game);
             break;
         case BOUNDS_RIGHT:
             game->playerScore++;
-            serveBall(game);
+            if(game->playerScore >= 9) resetGame(game);
+            else serveBall(game);
             break;
-        case PADDLE_LEFT: case PADDLE_RIGHT:
-            //game->ballVelY = -game->ballVelY;
-            game->ballVelX = -game->ballVelX;
+        case PADDLE_LEFT:
+            bounceOffPaddle(game, game->playerY, 1);
+            break;
+        case PADDLE_RIGHT:
+            bounceOffPaddle(game, game->enemyY, -1);
+            break;
         case BOUNDS_NONE:
             break;
     }
@@ -150,7 +188,7 @@ static void drawCentreLine(const game_t* game, SDL_Surface* surface){
     }
 }
 
-static void drawScores(const game_t* game, SDL_Surface* surface){
+static void drawDigit(SDL_Surface* surface, int x, int y, int digit){
     //to draw the numbers, there are no draw text sdl functions.
     //so we will use a 7 segment display for them.
     //we will turn them on using bitwise operations (a first for me!)
@@ -176,14 +214,14 @@ static void drawScores(const game_t* game, SDL_Surface* surface){
     //8 gfedbca
     //9 gfdcba
 
-    Uint8 numbers[10] = {
+    static const Uint8 numbers[10] = {
         0x77,   // 0
         0x24,   // 1
         0x5D,   // 2
         0x6D,   // 3
         0x2E,   // 4
         0x6B,   // 5
-        0x7B,   // 6 
+        0x7B,   // 6
         0x25,   // 7
         0x7F,   // 8
         0x6F    // 9
@@ -192,29 +230,22 @@ static void drawScores(const game_t* game, SDL_Surface* surface){
     int segmentT = 6;
     int gap = 1;
     int segmentHeight = segmentT * 5;
-    int totalHeight = (segmentHeight * 2) + (segmentT * 3);
-    int totalWidth = (segmentT * 2) + segmentHeight;
 
-    
+    const int xLeft   = x;
+    const int xMid    = x + segmentT + gap;
+    const int xRight  = x + segmentT + (gap * 2) + segmentHeight;
 
-    //player drawing
-    int playerScoreX = game->width / 4 - totalWidth / 2;
-    int playerScoreY = 20;
-    const int xLeft   = playerScoreX;
-    const int xMid    = playerScoreX + segmentT + gap;
-    const int xRight  = playerScoreX + segmentT + (gap * 2) + segmentHeight;
+    const int yTop    = y;
+    const int yUpper  = y + segmentT + gap;
+    const int yMid    = y + segmentT + (gap * 2) + segmentHeight;
+    const int yLower  = y + (segmentT * 2) + (gap * 3) + segmentHeight;
+    const int yBottom = y + (segmentT * 2) + (gap * 4) + (segmentHeight * 2);
 
-    const int yTop    = playerScoreY;
-    const int yUpper  = playerScoreY + segmentT + gap;
-    const int yMid    = playerScoreY + segmentT + (gap * 2) + segmentHeight;
-    const int yLower  = playerScoreY + (segmentT * 2) + (gap * 3) + segmentHeight;
-    const int yBottom = playerScoreY + (segmentT * 2) + (gap * 4) + (segmentHeight * 2);
-
-    const Uint8 mask = numbers[game->playerScore];
+    const Uint8 mask = numbers[digit];
 
     // horizontal segments
-    if (mask & (1u << 0)) SDL_FillRect(surface, &(SDL_Rect){xMid, yTop,    segmentHeight, segmentT}, 0xFFFFFFFF);
-    if (mask & (1u << 3)) SDL_FillRect(surface, &(SDL_Rect){xMid, yMid,    segmentHeight, segmentT}, 0xFFFFFFFF);
+    if (mask & (1u << 0)) SDL_FillRect(surface, &(SDL_Rect){xMid, yTop, segmentHeight, segmentT}, 0xFFFFFFFF);
+    if (mask & (1u << 3)) SDL_FillRect(surface, &(SDL_Rect){xMid, yMid, segmentHeight, segmentT}, 0xFFFFFFFF);
     if (mask & (1u << 6)) SDL_FillRect(surface, &(SDL_Rect){xMid, yBottom, segmentHeight, segmentT}, 0xFFFFFFFF);
 
     // left segments
@@ -224,18 +255,19 @@ static void drawScores(const game_t* game, SDL_Surface* surface){
     // right segments
     if (mask & (1u << 2)) SDL_FillRect(surface, &(SDL_Rect){xRight, yUpper, segmentT, segmentHeight}, 0xFFFFFFFF);
     if (mask & (1u << 5)) SDL_FillRect(surface, &(SDL_Rect){xRight, yLower, segmentT, segmentHeight}, 0xFFFFFFFF);
+}
 
-    //top left of total digit.
-    //left side is this x
-    //middle is this + segmentT + 1/8 t
-    //right is this + segmentT + 2/8 t + segmentLength;
-    
-    //y is 20,
-    // 20 + 1/8t +  segmentT
-    //20 + 1/8t + segmentT + 1/8 T + segmentLength
-    //20 + 1/8t + 2(segmentT) + 2/8 T + segmentLength
-    //20 + 1/8t + 2(segmentT) + 3/8 T + 2(segmentLength)
+static void drawScores(const game_t* game, SDL_Surface* surface){
+    int segmentT = 6;
+    int segmentHeight = segmentT * 5;
+    int totalWidth = (segmentT * 2) + segmentHeight;
+    int scoreY = 20;
 
+    int playerScoreX = game->width / 4 - totalWidth / 2;
+    int enemyScoreX  = (game->width * 3) / 4 - totalWidth / 2;
+
+    drawDigit(surface, playerScoreX, scoreY, game->playerScore);
+    drawDigit(surface, enemyScoreX, scoreY, game->enemyScore);
 }
 
 void render(game_t* game, SDL_Window* window, SDL_Surface* surface){
